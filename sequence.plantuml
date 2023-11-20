@@ -1,0 +1,19 @@
+@startuml
+title GoHjell Analysis Request Lifetime
+
+participant User
+participant Caddy
+participant GoHjell
+participant Stockfish
+
+User->Caddy: HTTPS POST /analysis/
+Caddy->GoHjell: HTTP POST /analysis/
+GoHjell->Stockfish: UCI setoption
+GoHjell->Stockfish: UCI newgame
+GoHjell->Stockfish: UCI position
+GoHjell->Stockfish: UCI go
+Stockfish->GoHjell: Std Out
+GoHjell->Caddy: HTTP Response Body
+Caddy->User: HTTPS Response Body
+
+@enduml
