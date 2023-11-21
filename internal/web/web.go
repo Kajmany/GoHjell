@@ -1,8 +1,10 @@
 package web
 
 import (
+	"CS361_Service/internal/engine"
 	"encoding/json"
 	"fmt"
+	"github.com/notnil/chess/uci"
 	"log"
 	"net/http"
 	"regexp"
@@ -15,15 +17,22 @@ type RequestData struct {
 	//Engine option to calculate and output multiple Principle Variations
 	//Instead of just the best (line of) moves
 	MultiPV int
+	//Engine option for how many moves ahead
+	Depth int
 }
 
-func ReadyServer() (mux *http.ServeMux, err error) {
+func ReadyServer(e *uci.Engine) (mux *http.ServeMux) {
+	handler := &EngineHandler{eng: e}
 	mux = http.NewServeMux()
-	mux.HandleFunc("/analyze/", engineGateway)
-	return mux, nil
+	mux.Handle("/analyze/", handler)
+	return mux
 }
 
-func engineGateway(w http.ResponseWriter, r *http.Request) {
+type EngineHandler struct {
+	eng *uci.Engine
+}
+
+func (handler *EngineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		//Nothing to GET, DELETE, PATCH, etc...
 		http.Error(w, "This endpoint only accepts POST.", http.StatusMethodNotAllowed)
@@ -49,11 +58,19 @@ func engineGateway(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "The FEN provided appears to be invalid.", http.StatusBadRequest)
 		return
 	}
-	if rd.MultiPV > 20 || rd.MultiPV < 1 {
-		http.Error(w, "The MultiPV value is outside acceptable bounds of 1-20", http.StatusBadRequest)
+	if rd.MultiPV > 10 || rd.MultiPV < 1 {
+		http.Error(w, "The MultiPV value is outside acceptable bounds of 1-10", http.StatusBadRequest)
+		return
+	}
+	if rd.Depth > 20 || rd.Depth < 1 {
+		http.Error(w, "The depth value is outside acceptable bounds of 1-20", http.StatusBadRequest)
 		return
 	}
 	log.Println("Successfully parsed input...")
+	variations, err := engine.RunPosition(rd, handler.eng)
+	for _, variation := range variations {
+		log.Println(variation.Depth, variation.Score, variation.Rank)
+	}
 	w.WriteHeader(http.StatusAccepted)
 	fmt.Print("Very nice!")
 }

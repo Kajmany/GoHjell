@@ -32,13 +32,13 @@ func (cmd CmdDumbPosition) ProcessResponse(e *uci.Engine) error {
 // Subset of data reported by UCI info output. All I care to send for JSON serialization out!
 type PrincipalVariation struct {
 	//depth the engine was asked to process for this PV. NOT a way to measure actual depth (seldepth) or # of moves inside
-	depth int
+	Depth int
 	//score is measured in nonsense unit known as the centipawn - chess computers love it!
-	score int
+	Score int
 	//when MPV is enabled engine numbers the PV's from 1-N where 1 is the best quality of them, and N is the worst.
-	rank int
+	Rank int
 	//stringly typed array of moves, alternating between 1st player @ [0] and 1st opponent ponder @ [1].
-	moves []string
+	Moves []string
 }
 
 // notnil's uci.SearchResults populated by the uci.CmdGo only tracks one Principal Variation. MPV was requested of me
@@ -90,11 +90,11 @@ func (cmd CmdDumbMPVGo) ProcessResponse(e *uci.Engine) error {
 				return err
 			}
 			newPVMoves := strings.Split(matches[4], " ")
-			var newPV = PrincipalVariation{rank: newPVRank, score: newPVScore, moves: newPVMoves}
+			var newPV = PrincipalVariation{Rank: newPVRank, Score: newPVScore, Moves: newPVMoves}
 			//This keeps the array ordered by MultiPV rank (which starts at 1). We have to be prepared to over-write
 			//Because it's possible for INFO at our desired depth for a given MultiPV to be output several times.
 			//This ensures only the last one is saved in our final array.
-			pvContainer[newPVRank-1] = newPV
+			pvContainer[newPVRank-1] = newPV //FIXME it's possible to return without all slots being populated
 		}
 	}
 	//We're totally reliant on side effects because the interface is being satisfied, and does the same

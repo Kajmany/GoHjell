@@ -18,8 +18,8 @@ func ReadyEngine(name string) (e *uci.Engine, err error) {
 }
 
 // The uci.Engine is thread safe so there's no need for queuing here.
-func runPosition(req web.RequestData, eng *uci.Engine) ([]PrincipalVariation, error) {
-	var cmd = CmdDumbMPVGo{depth: 20}
+func RunPosition(req web.RequestData, eng *uci.Engine) ([]PrincipalVariation, error) {
+	var cmd = CmdDumbMPVGo{depth: req.Depth}
 	err := eng.Run(
 		uci.CmdSetOption{Name: "MultiPV", Value: strconv.Itoa(req.MultiPV)},
 		uci.CmdUCINewGame,
