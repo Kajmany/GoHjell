@@ -1,9 +1,8 @@
 package web
 
 import (
-	"CS361_Service/internal/engine"
+	"CS361_Service/internal/common"
 	"encoding/json"
-	"fmt"
 	"github.com/notnil/chess/uci"
 	"log"
 	"net/http"
@@ -11,25 +10,31 @@ import (
 	"strings"
 )
 
-type RequestData struct {
-	//Forsyth-Edwards Notation representation of chess board & game state
-	FEN string
-	//Engine option to calculate and output multiple Principle Variations
-	//Instead of just the best (line of) moves
-	MultiPV int
-	//Engine option for how many moves ahead
-	Depth int
+type EngineInterface interface {
+	RunPosition(req common.RequestData) error
+	ProxyResults() uci.SearchResults //TODO learn hwo to use interfaces better than... this...
 }
 
-func ReadyServer(e *uci.Engine) (mux *http.ServeMux) {
-	handler := &EngineHandler{eng: e}
+func ReadyServer(engine EngineInterface) (mux *http.ServeMux) {
+	handler := &EngineHandler{engine: engine}
 	mux = http.NewServeMux()
 	mux.Handle("/analyze/", handler)
 	return mux
 }
 
+type ResponseBody struct {
+	PrincipleVariations []VariationBody `json:"variations"`
+}
+
+type VariationBody struct {
+	Depth int      `json:"depth"`
+	Score int      `json:"score"`
+	Rank  int      `json:"rank"`
+	Moves []string `json:"moves"`
+}
+
 type EngineHandler struct {
-	eng *uci.Engine
+	engine EngineInterface
 }
 
 func (handler *EngineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +50,7 @@ func (handler *EngineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	//So we need to make a new decoder with every single request! $$$
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	var rd RequestData
+	var rd common.RequestData
 	err := decoder.Decode(&rd)
 	if err != nil {
 		log.Println(err)
@@ -54,7 +59,7 @@ func (handler *EngineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	//End code substantially lifted from Alex Edwards. JSON theoretically valid but the actual values aren't checked!
-	if !ValidFEN(rd.FEN) {
+	if !ValidFEN(rd.FEN) { //TODO I realized I can use the notnil chess library to do this better (& slower) than I do
 		http.Error(w, "The FEN provided appears to be invalid.", http.StatusBadRequest)
 		return
 	}
@@ -67,12 +72,33 @@ func (handler *EngineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	log.Println("Successfully parsed input...")
-	variations, err := engine.RunPosition(rd, handler.eng)
-	for _, variation := range variations {
-		log.Println(variation.Depth, variation.Score, variation.Rank)
+	err = handler.engine.RunPosition(rd)
+	processed := handler.engine.ProxyResults()
+
+	body := ResponseBody{make([]VariationBody, rd.MultiPV)}
+	for i := 0; i < rd.MultiPV; i++ {
+		body.PrincipleVariations[i] = VariationBody{
+			Depth: processed.Info.Depth,
+			Score: processed.Info.PVs[i].Score,
+			Rank:  processed.Info.PVs[i].Rank,
+			Moves: processed.Info.PVs[i].Moves,
+		}
 	}
+	JSONData, err := json.Marshal(body)
+	if err != nil {
+		http.Error(w, "There was a problem packaging your processed data.", http.StatusInternalServerError)
+		log.Println("Failed to marshal properly!")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	fmt.Print("Very nice!")
+	status, err := w.Write(JSONData)
+	{
+		log.Println("Finished writing response with status:", status)
+		if err != nil {
+			log.Println("There was a problem with the response:", err)
+		}
+	}
 }
 
 func ValidFEN(FEN string) bool {
