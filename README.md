@@ -23,6 +23,13 @@ Responses will look like [this](example-response.json).
 
 My hosted version will require basic authentication, so don't forget to add the header with a supplied key!
 
+## Diagrams!
+*PlantUML associated with 4x increase in lifetime earnings, says local Project Manager MOOC salesman*
+
+The first demonstrates underlying commands rather than implementation: ![nice](sequence.png)
+
+The chart is more concerned with implementation: ![waow!](sequence2.png)
+
 ## Excellent Use Cases
 This application is a fantastic fit for someone who might've developed a script specifically to use it. Potentially for college credit.
 

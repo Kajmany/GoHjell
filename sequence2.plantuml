@@ -1,0 +1,26 @@
+@startuml
+title GoHjell Analysis Function Calls
+
+actor User
+participant web
+participant engine
+participant chess
+participant Stockfish
+
+note right of chess: notnil chess package I did horrific patches to. Mostly not my code
+note right of Stockfish: Or another UCI-compatible chess engine
+
+User->web: HTTP POST /analysis/
+web->web: EngineHandler ServeHTTP(*request*)
+web->engine: EngineInterface RunPosition(RequestData)
+engine->chess: uci.Engine Run(... uci.Cmd)
+chess->Stockfish: *stdin*
+Stockfish->chess: *stdout*
+chess->chess: uci.SearchResults
+web->>engine: EngineInterface ProxyResults()
+engine<<-chess: uci.Engine SearchResults()
+engine->>web: EngineInterface ProxyResults()
+web->web: *EngineHandler ServeHTTP Martials to JSON*
+web->User: HTTP Response Body
+
+@enduml
