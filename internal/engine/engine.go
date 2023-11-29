@@ -23,7 +23,6 @@ type EngImplementer struct {
 
 // The uci.Engine is thread safe so there's no need for queuing here.
 func (e EngImplementer) RunPosition(req common.RequestData) error {
-	//var cmd = uci.CmdDumbMPVGo{Depth: req.Depth, MultiPV: req.MultiPV} //Kind of redundant info pass FIXME ?
 	err := e.Eng.Run(
 		uci.CmdSetOption{Name: "MultiPV", Value: strconv.Itoa(req.MultiPV)},
 		uci.CmdUCINewGame,

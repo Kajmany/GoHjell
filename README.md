@@ -13,7 +13,7 @@ endpoint /analyze/!
 Suggested Start:
 `./gohjell localhost:8080 stockfish`
 
-## Usage
+## Usage - Consider this a Contract!
 
 A request might look like the [this](example.json).
 

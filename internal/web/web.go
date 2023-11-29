@@ -73,8 +73,12 @@ func (handler *EngineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 	log.Println("Successfully parsed input...")
 	err = handler.engine.RunPosition(rd)
+	if err != nil {
+		http.Error(w, "There was a problem communicating with the engine.", http.StatusInternalServerError)
+		log.Println("Problem running position: ", err)
+		return
+	}
 	processed := handler.engine.ProxyResults()
-
 	body := ResponseBody{make([]VariationBody, rd.MultiPV)}
 	for i := 0; i < rd.MultiPV; i++ {
 		body.PrincipleVariations[i] = VariationBody{
